@@ -1,0 +1,123 @@
+apply from: "../commons-device.gradle"
+apply plugin: 'kotlin-android'
+apply from : '../dependencies.gradle'
+
+/* gets the version name from the latest Git tag, stripping the leading v off */
+def getVersionName = { ->
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'describe', '--tags', '--always'
+        standardOutput = stdout
+    }
+    return stdout.toString().trim()
+}
+
+static def versionCodeEpoch() {
+    return (new Date().getTime() / 1000).toInteger()
+}
+
+android {
+    defaultConfig {
+        applicationId "org.torproject.android"
+        versionName getVersionName()
+        minSdkVersion 18
+        compileSdkVersion 33
+        targetSdkVersion 33
+        multiDexEnabled true
+        testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
+        archivesBaseName = "Orbot"
+    }
+    compileOptions {
+//        coreLibraryDesugaringEnabled true
+    }
+    buildTypes {
+        release {
+            shrinkResources false
+            minifyEnabled false
+        }
+    }
+
+    flavorDimensions "free"
+
+    productFlavors {
+        fullperm {
+            dimension "free"
+            applicationId 'org.torproject.android'
+            versionCode 1700300100
+            versionName getVersionName()
+            archivesBaseName = "Orbot-${versionName}"
+        }
+
+        nightly {
+            dimension "free"
+            applicationId 'org.torproject.android.nightly'
+            versionName getVersionName()
+            versionCode versionCodeEpoch()
+            archivesBaseName = "Orbot-${versionName}"
+        }
+    }
+
+    splits {
+        abi {
+            universalApk true
+        }
+    }
+    packagingOptions {
+        jniLibs {
+            /**
+            excludes += ['lib/x86/libgojni.so',
+                         'lib/x86_64/libgojni.so',
+                         'lib/arm64-v8a/libgojni.so',
+                         'lib/armeabi-v7a/libgojni.so',
+                         'lib/armeabi/libgojni.so']
+             **/
+        }
+
+        resources {
+            excludes += ['META-INF/androidx.localbroadcastmanager_localbroadcastmanager.version']
+        }
+    }
+
+    dependencies {
+        implementation(
+                project(':appcore'),
+                project(':intentintegrator'),
+                project(':orbotservice'),
+                libs.android_material,
+                libs.android_volley,
+                libs.androidx_localbroadcast,
+
+                //use locally built ipt_proxy+go_tun2socks
+                project(':OrbotLib')
+             //   libs.ipt_proxy
+        )
+
+        implementation "com.squareup.retrofit2:retrofit:2.9.0"
+        implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
+
+        androidTestImplementation libs.fastlane_screengrab
+//        coreLibraryDesugaring 'com.android.tools:desugar_j dk_libs:1.1.5'
+
+
+    }
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+        disable 'InvalidPackage'
+        htmlReport true
+        lintConfig file('../lint.xml')
+        textReport false
+        xmlReport false
+    }
+    namespace 'org.torproject.android'
+}
+dependencies {
+    implementation "androidx.core:core-ktx:1.8.0"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    // Kotlin
+    implementation "androidx.navigation:navigation-fragment-ktx:2.5.3"
+    implementation "androidx.navigation:navigation-ui-ktx:2.5.3"
+}
